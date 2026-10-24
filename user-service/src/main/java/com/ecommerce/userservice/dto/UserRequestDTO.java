@@ -1,52 +1,29 @@
 package com.ecommerce.userservice.dto;
 
-import com.ecommerce.userservice.validation.ValidEmailDomain;
-import jakarta.validation.constraints.Email;
+import com.ecommerce.userservice.validation.ValidEmail;
+import com.ecommerce.userservice.validation.ValidName;
+import com.ecommerce.userservice.validation.ValidPassword;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 
 public record UserRequestDTO (
     @NotBlank(message = "El nombre es obligatorio")
-    @Pattern(
-            regexp = "[\\p{L}]+(?:[ ]+[\\p{L}]+)*",
-            message = "El nombre solo puede contener letras y espacios"
-    )
+    @ValidName(message = "El nombre solo puede contener letras y espacios")
     String name,
 
     @NotBlank(message = "El apellido paterno es obligatorio")
-    @Pattern(
-            regexp = "[\\p{L}]+(?:[ ]+[\\p{L}]+)*",
-            message = "El apellido paterno solo puede contener letras y espacios"
-    )
+    @ValidName(message = "El apellido paterno solo puede contener letras y espacios")
     String paternalName,
 
     @NotBlank(message = "El apellido materno es obligatorio")
-    @Pattern(
-            regexp = "[\\p{L}]+(?:[ ]+[\\p{L}]+)*",
-            message = "El apellido materno solo puede contener letras y espacios"
-    )
+    @ValidName(message = "El apellido materno solo puede contener letras y espacios")
     String maternalName,
 
     @NotBlank(message = "El email es obligatorio")
-    @Pattern(
-            regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z]{2,})+$",
-            message = "El correo no tiene un formato válido"
-    )
-    @ValidEmailDomain
+    @ValidEmail
     String email,
 
-        /*La contraseña debe incluir:
-        - Minimo 8 caracteres, Maximo 72 caracteres
-        - Al menos una letra minúscula
-        - Al menos una letra mayúscula
-        - Al menos un dígito
-        - Al menos un carácter especial
-     */
     @NotBlank(message = "El password es obligatorio")
-    @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,72}$",
-
-            message = "La contraseña requiere mínimo 8 caracteres, mayúscula, minúscula, número y símbolo."
-    )
-    String password){
+    @ValidPassword
+    String password
+){
 }

@@ -31,13 +31,13 @@ class LoginControllerTest {
     @Test
     void loginDevuelveElTokenEnElHeaderAuthorization() {
         LoginRequestDTO request = new LoginRequestDTO("isaac@example.com", "Clave123!");
-        when(loginService.login(any(LoginRequestDTO.class))).thenReturn("jwt-token");
+        when(loginService.login(any(LoginRequestDTO.class))).thenReturn(new com.ecommerce.userservice.dto.AuthResponseDTO("jwt-token", java.time.Instant.now(), "refresh", java.time.Instant.now()));
 
-        ResponseEntity<Void> resultado = loginController.login(request);
+        ResponseEntity<com.ecommerce.userservice.dto.AuthResponseDTO> resultado = loginController.login(request);
 
         assertEquals(HttpStatus.OK, resultado.getStatusCode());
         assertEquals("jwt-token", resultado.getHeaders().getFirst(HttpHeaders.AUTHORIZATION));
-        assertNull(resultado.getBody());
+        assertEquals("refresh", resultado.getBody().refreshToken());
         verify(loginService).login(request);
     }
 

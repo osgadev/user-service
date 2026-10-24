@@ -3,52 +3,40 @@ package com.ecommerce.userservice.security.config.jwt;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import java.time.Instant;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
 @Component
 public class JwtUtil {
+    private final Algorithm algorithm;
 
-    @Value("${JWT_SECRET}")
-    private static String SECRET_KEY="1dze3mXdb3SzOjU4UQQ7242hbvNuBtZTgt3sRsH9YmU=";
-    //Algoritmo que se usara para crear el JWT
-    private static Algorithm ALGORITHM = Algorithm.HMAC256(SECRET_KEY);
+    public JwtUtil(@Value("${JWT_SECRET}") String secret) {
+        this.algorithm = Algorithm.HMAC256(secret);
+    }
 
-    //Creación del Jwt
-    public String create(String username) {
+    public String create(String email, String jwtId, Instant expiresAt) {
         return JWT.create()
-                //Se agrega el email
-                .withSubject(username)
-                //Se agrega quien emitio este JWT
+                .withSubject(email)
                 .withIssuer("Users-MS")
-                //Se agrega fecha de emision
+                .withJWTId(jwtId)
                 .withIssuedAt(new Date())
-                //Se agrega la fecha de expiracion
-                .withExpiresAt(new Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(15)))
-                //Se genera la firma
-                .sign(ALGORITHM);
+                .withExpiresAt(Date.from(expiresAt))
+                .sign(algorithm);
     }
 
-    //Verifica si un jwt es valido, será usado en JwtFilter
-    public boolean isValid(String jwt){
-        try{
-            JWT.require(ALGORITHM)
-                    .build()
-                    .verify(jwt);
-            return true;
-        } catch(JWTVerificationException e){
-            return false;
+    public DecodedJWT verify(String token) {
+        DecodedJWT decoded = JWT.require(algorithm)
+                                .withIssuer("Users-MS")
+                                .build()
+                                .verify(token);
+
+        if (decoded.getSubject() == null || decoded.getId() == null || decoded.getExpiresAt() == null) {
+
+            throw new JWTVerificationException("JWT incompleto");
         }
+        return decoded;
     }
-
-    //Extraemos el username del Jwt
-    public String getUsername(String jwt){
-        return JWT.require(ALGORITHM)
-                .build()
-                .verify(jwt)
-                .getSubject();
-    }
-
 }

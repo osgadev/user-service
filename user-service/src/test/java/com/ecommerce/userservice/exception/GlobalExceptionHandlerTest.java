@@ -108,7 +108,7 @@ class GlobalExceptionHandlerTest {
                 new BeanPropertyBindingResult(dto, "userRequest");
         bindingResult.rejectValue(
                 "email",
-                "ValidEmailDomain",
+                "ValidEmail",
                 "El dominio del correo no está permitido"
         );
 

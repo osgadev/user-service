@@ -42,6 +42,10 @@ Su estructura es la siguiente:
  `created_at`        | `DATETIME`     | Fecha de creación del usuario: `YYYY-MM-DD HH:MM:SS`<br/><br/>                    |
 `failed_login_attempts`| `INT`          | Intentos fallidos de login consecutivos                                           | `created_at`        | `DATETIME`   | Fecha de creación del usuario: `YYYY-MM-DD HH:MM:SS`<br/><br/>                    |
 `locked_until`| `DATETIME`     | Fecha UTC de expiración del bloqueo del usuario                                   |
+| `jwt_id` | `VARCHAR(36)` | Identificador del JWT vigente del usuario |
+| `jwt_expires_at` | `DATETIME(6)` | Fecha UTC de expiración del JWT |
+| `refresh_token_hash` | `VARCHAR(64)` | Hash SHA-256 del refresh token vigente |
+| `refresh_token_expires_at` | `DATETIME(6)` | Fecha UTC de expiración del refresh token |
 ---
 
 ## Diagrama de Base de Datos
@@ -61,6 +65,10 @@ erDiagram
         DATETIME created_at
         INT failed_login_attempts
         DATETIME locked_until
+        VARCHAR jwt_id
+        DATETIME jwt_expires_at
+        VARCHAR refresh_token_hash
+        DATETIME refresh_token_expires_at
     }
 ```
 
@@ -70,20 +78,22 @@ erDiagram
 
 Se exponen los siguientes endpoints:
 
-| Método  | Endpoint                     | Descripción                               |
-|---------|------------------------------|-------------------------------------------|
-| `POST`  | `/api/auth/login`            | Iniciar sesión y generar JWT              |
-| `POST`  | `/api/users`                 | Registrar un nuevo usuario                |
-| `GET`   | `/api/users/{id}`            | Consultar un usuario                      |
-| `GET`   | `/api/users/all`             | Consultar todos los usuarios              |
-| `GET`   | `/api/users/active`          | Consultar un usuario por isActive         |
-| `GET`   | `/api/users/{id}/isActive`   | Consultar todos los usuarios por isActive |
-| `GET`   | `/api/users/role`            | Consultar todos los usuarios por Rol      |
-| `PUT`   | `/api/users/{id}/role`       | Actualizar Rol de un usuario              |
-| `PUT`   | `/api/users/{id}`            | Actualizar información de un usuario      |
-| `PATCH` | `/api/users/{id}/deactivate` | Desactivar un usuario                     |
-| `PATCH` | `/api/users/{id}/activate`   | Activar un usuario                        |
-| `PATCH` | `/api/auth/password`         | Cambiar password                          |
+| Método  | Endpoint                     | Descripción                                                      |
+|---------|------------------------------|------------------------------------------------------------------|
+| `POST`  | `/api/auth/login`            | Iniciar sesión y generar JWT                                     |
+| `POST`  | `/api/auth/refresh` | Renovar el JWT y el refresh token mediante un refresh token vigente |
+| `POST`  | `/api/users`                 | Registrar un nuevo usuario                                       |
+| `GET`   | `/api/users/{id}`            | Consultar un usuario                                             |
+| `GET`   | `/api/users/all`             | Consultar todos los usuarios                                     |
+| `GET`   | `/api/users/active`          | Consultar un usuario por isActive                                |
+| `GET`   | `/api/users/{id}/isActive`   | Consultar todos los usuarios por isActive                        |
+| `GET`   | `/api/users/role`            | Consultar todos los usuarios por Rol                             |
+| `GET`   | `/api/auth/users/{id}/authenticated` | Consultar si un usuario está autenticado                         |
+| `PUT`   | `/api/users/{id}/role`       | Actualizar Rol de un usuario                                     |
+| `PUT`   | `/api/users/{id}`            | Actualizar información de un usuario                             |
+| `PATCH` | `/api/users/{id}/deactivate` | Desactivar un usuario                                            |
+| `PATCH` | `/api/users/{id}/activate`   | Activar un usuario                                               |
+| `PATCH` | `/api/auth/password`         | Cambiar password                                                 |
 
 ---
 

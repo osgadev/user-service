@@ -1,7 +1,9 @@
 package com.ecommerce.userservice.controller;
 
-import com.ecommerce.userservice.dto.LoginRequestDTO;
+import com.ecommerce.userservice.dto.*;
 import com.ecommerce.userservice.service.LoginService;
+import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,19 +11,29 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 public class LoginController {
-
     private final LoginService loginService;
-
     public LoginController(LoginService loginService) {
         this.loginService = loginService;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Void> login(@RequestBody LoginRequestDTO loginRequest) {
+    public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
+        return tokenResponse(loginService.login(request));
+    }
 
-        //Si recibimos el jwt, la authentication fue exitosa
-        String jwt = loginService.login(loginRequest);
-        //Devolvemos un Body vacio, el jwt en el Header y un estado 200
-        return ResponseEntity.ok().header(HttpHeaders.AUTHORIZATION, jwt).build();
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponseDTO> refresh(@Valid @RequestBody RefreshRequestDTO request) {
+        return tokenResponse(loginService.refresh(request.refreshToken()));
+    }
+
+    @GetMapping("/users/{id}/authenticated")
+    public ResponseEntity<AuthenticationStatusDTO> getStatus(@PathVariable Long id) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(loginService.getAuthenticationStatus(id));
+    }
+
+    private ResponseEntity<AuthResponseDTO> tokenResponse(AuthResponseDTO response) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .header(HttpHeaders.AUTHORIZATION, response.jwt()).body(response);
     }
 }

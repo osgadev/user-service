@@ -71,13 +71,13 @@ class LoginServiceTest {
 
     @Test
     void login_exitoso_usuarioExistente() {
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
-        when(jwtUtil.create(EMAIL)).thenReturn(TOKEN);
+        when(jwtUtil.create(org.mockito.ArgumentMatchers.eq(EMAIL), any(String.class), any(Instant.class))).thenReturn(TOKEN);
 
-        String resultado = loginService.login(request);
+        var resultado = loginService.login(request);
 
-        assertEquals(TOKEN, resultado);
+        assertEquals(TOKEN, resultado.jwt());
         assertEquals(0, usuario.getFailedLoginAttempts().intValue());
         assertNull(usuario.getLockedUntil());
 
@@ -89,32 +89,27 @@ class LoginServiceTest {
         assertEquals(PASSWORD, enviado.getCredentials());
 
         verify(usersRepository).save(usuario);
-        verify(jwtUtil).create(EMAIL);
+        verify(jwtUtil).create(org.mockito.ArgumentMatchers.eq(EMAIL), any(String.class), any(Instant.class));
     }
 
     @Test
-    void login_exitoso_usuarioInexistente() {
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+    void login_noEmiteTokensSiNoExisteElUsuario() {
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.empty());
         when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
-        when(jwtUtil.create(EMAIL)).thenReturn(TOKEN);
-
-        String resultado = loginService.login(request);
-
-        assertEquals(TOKEN, resultado);
-        verify(usersRepository, never()).save(any(Users.class));
-        verify(jwtUtil).create(EMAIL);
+        assertThrows(LoginFailedException.class, () -> loginService.login(request));
+        verifyNoInteractions(jwtUtil);
     }
 
     @Test
     void login_exitoso_reseteaIntentosPrevios() {
         usuario.setFailedLoginAttempts(2);
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
-        when(jwtUtil.create(EMAIL)).thenReturn(TOKEN);
+        when(jwtUtil.create(org.mockito.ArgumentMatchers.eq(EMAIL), any(String.class), any(Instant.class))).thenReturn(TOKEN);
 
-        String resultado = loginService.login(request);
+        var resultado = loginService.login(request);
 
-        assertEquals(TOKEN, resultado);
+        assertEquals(TOKEN, resultado.jwt());
         assertEquals(0, usuario.getFailedLoginAttempts().intValue());
         assertNull(usuario.getLockedUntil());
         verify(usersRepository).save(usuario);
@@ -123,7 +118,7 @@ class LoginServiceTest {
     @Test
     void login_usuarioBloqueado_lanzaExcepcion() {
         usuario.setLockedUntil(AHORA.plusMinutes(1));
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
 
         LoginFailedException excepcion = assertThrows(
                 LoginFailedException.class,
@@ -139,13 +134,13 @@ class LoginServiceTest {
     void login_bloqueoExpirado_reseteaYLoginExitoso() {
         usuario.setFailedLoginAttempts(3);
         usuario.setLockedUntil(AHORA.minusMinutes(1));
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
-        when(jwtUtil.create(EMAIL)).thenReturn(TOKEN);
+        when(jwtUtil.create(org.mockito.ArgumentMatchers.eq(EMAIL), any(String.class), any(Instant.class))).thenReturn(TOKEN);
 
-        String resultado = loginService.login(request);
+        var resultado = loginService.login(request);
 
-        assertEquals(TOKEN, resultado);
+        assertEquals(TOKEN, resultado.jwt());
         assertEquals(0, usuario.getFailedLoginAttempts().intValue());
         assertNull(usuario.getLockedUntil());
         verify(usersRepository).save(usuario);
@@ -154,7 +149,7 @@ class LoginServiceTest {
     @Test
     void login_credencialesInvalidas_registraElPrimerIntento() {
         usuario.setFailedLoginAttempts(0);
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new BadCredentialsException("Credenciales inválidas"));
 
@@ -168,7 +163,7 @@ class LoginServiceTest {
     @Test
     void login_credencialesInvalidas_tercerIntentoBloqueaAlUsuario() {
         usuario.setFailedLoginAttempts(2);
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new BadCredentialsException("Credenciales inválidas"));
 
@@ -182,7 +177,7 @@ class LoginServiceTest {
     @Test
     void login_credencialesInvalidas_mantieneElTopeDeIntentos() {
         usuario.setFailedLoginAttempts(5);
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new BadCredentialsException("Credenciales inválidas"));
 
@@ -195,7 +190,7 @@ class LoginServiceTest {
 
     @Test
     void login_credencialesInvalidas_usuarioInexistente() {
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.empty());
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new BadCredentialsException("Credenciales inválidas"));
 
@@ -207,7 +202,7 @@ class LoginServiceTest {
     @Test
     void login_errorDeAutenticacion_noIncrementaLosIntentos() {
         usuario.setFailedLoginAttempts(0);
-        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new DisabledException("Cuenta deshabilitada"));
 

@@ -1,6 +1,6 @@
 package com.ecommerce.userservice.dto;
 
-import com.ecommerce.userservice.validation.ValidEmailDomain;
+import com.ecommerce.userservice.validation.ValidEmail;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Pattern;
 
@@ -31,7 +31,7 @@ public record UpdateUserRequestDTO(
                 regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z]{2,})+$",
                 message = "El correo no tiene un formato válido"
         )
-        @ValidEmailDomain
+        @ValidEmail
         String email
 ){
 }

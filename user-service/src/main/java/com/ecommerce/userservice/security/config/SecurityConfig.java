@@ -35,26 +35,48 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors( cors -> cors.configurationSource( corsConfigurationSource() ) )
+                .cors( cors ->
+                        cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sess -> sess
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                ).exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> {
-                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            res.setContentType("application/json;charset=UTF-8");
-                            res.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Token ausente o inválido\"}");
-                        })
-                        .accessDeniedHandler((req, res, e) -> {
-                            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            res.setContentType("application/json;charset=UTF-8");
-                            res.getWriter().write("{\"status\":403,\"error\":\"Forbidden\",\"message\":\"No tienes permisos para acceder a este recurso\"}");
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                //Definimos mensajes para excepciones 401 Y 403
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(
+                                (
+                                        req,res,e
+                                ) -> {
+                                res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                res.setContentType("application/json;charset=UTF-8");
+                                res.getWriter().write(
+                                        "{\"status\":401," +
+                                                "\"error\":\"Unauthorized\"," +
+                                                "\"message\":\"Token ausente o inválido\"}");
+                                }
+                        )
+                        .accessDeniedHandler(
+                                (req, res, e
+                                ) -> {
+                                res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                                res.setContentType("application/json;charset=UTF-8");
+                                res.getWriter().write(
+                                        "{\"status\":403,\"error\":\"Forbidden\"" +
+                                                ",\"message\":\"No tienes permisos para acceder a este recurso\"}");
                         })
                 )
+
+                //Definimos Endpoints que no requieren Autenticación
                 .authorizeHttpRequests(auth -> auth
                         //Cualquiera se puede logear
                     .requestMatchers(HttpMethod.POST,"/api/auth/login").permitAll()
+                        //Cualquiera puede solicitar un refresh, pero debe enviar un refreshToken
+                    .requestMatchers(HttpMethod.POST,"/api/auth/refresh").permitAll()
+                        //Cualquiera puede consultar si un usuario está Autenticado
+                    .requestMatchers(HttpMethod.GET, "/api/auth/users/*/authenticated").permitAll()
                         //Cualquiera puede crear un nuevo usuario (Crear una cuenta)
                     .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+
+                        //El resto de Endpoints sí requieren Autenticación
                     .anyRequest()
                     .authenticated()
                 )
@@ -64,8 +86,8 @@ public class SecurityConfig {
     }
 
     /*
-	Metodo para comenzar la autenticacion de nuestras credenciales usando el token authenticate
-	Llamar en el service para comenzar el login
+	* Metodo para comenzar la autenticación de nuestras credenciales usando el token authenticate
+	* Debe ser llamado en el service para comenzar el login
 	*/
     @Bean
     public AuthenticationManager authenticationManager (AuthenticationConfiguration configuration) throws Exception{
@@ -92,6 +114,7 @@ public class SecurityConfig {
 
         // Por si se necesitan credenciales o cookies
         configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
 
         // Aplicamos esta configuración a todos los endpoints (/**)
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
