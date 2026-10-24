@@ -10,13 +10,13 @@ class EmailDomainValidatorTest {
     private final EmailDomainValidator validator = new EmailDomainValidator();
 
     @Test
-    void devuelveTrueSiElEmailEsNulo() {
-        assertTrue(validator.isValid(null, null));
+    void devuelveFalseSiElEmailEsNulo() {
+        assertFalse(validator.isValid(null, null));
     }
 
     @Test
-    void devuelveTrueSiElEmailNoTieneArroba() {
-        assertTrue(validator.isValid("sin-arroba", null));
+    void devuelveFalseSiElEmailNoTieneArroba() {
+        assertFalse(validator.isValid("sin-arroba", null));
     }
 
     @Test
