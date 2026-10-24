@@ -1,6 +1,20 @@
 package com.ecommerce.userservice.service;
 
 import com.ecommerce.userservice.dto.LoginRequestDTO;
+import com.ecommerce.userservice.dto.AuthResponseDTO;
+import com.ecommerce.userservice.dto.AuthenticationStatusDTO;
+import com.ecommerce.userservice.exception.InvalidRefreshTokenException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.security.SecureRandom;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.HexFormat;
+import java.util.UUID;
 import com.ecommerce.userservice.exception.LoginFailedException;
 import com.ecommerce.userservice.model.Users;
 import com.ecommerce.userservice.repository.UsersRepository;
@@ -13,7 +27,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.security.auth.login.LoginException;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -26,6 +39,7 @@ public class LoginService {
     private final Clock clock;
     private static final int MAX_FAILED_ATTEMPTS = 3;
     private static final int LOCK_DURATION_MINUTES = 5;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public LoginService(AuthenticationManager authenticationManager,
                         JwtUtil jwtUtil, UsersRepository usersRepository, Clock clock){
@@ -35,10 +49,14 @@ public class LoginService {
         this.clock = clock;
     }
 
+    // =========================================================
+    // Login
+    // =========================================================
+
     @Transactional(noRollbackFor = LoginFailedException.class)
-    public String login(LoginRequestDTO login) {
+    public AuthResponseDTO login(LoginRequestDTO login) {
         LocalDateTime now = LocalDateTime.now(clock);
-        Optional<Users> optionalUser = usersRepository.findByEmail(login.email());
+        Optional<Users> optionalUser = usersRepository.findByEmailForUpdate(login.email());
 
         //Valida si la búsqueda por email devolvió un user
         if(optionalUser.isPresent()){
@@ -75,18 +93,14 @@ public class LoginService {
             throw new LoginFailedException();
         }
 
-        optionalUser.ifPresent(user -> {
-            //Aplica para usuarios sin bloqueo pero con intentos fallidos de login
-            //ó sin bloqueo y con 0 intentos fallidos de login
-            resetBlockedState(user);
-            usersRepository.save(user);
-        });
-
-        //Creamos el JWT usando las credenciales obtenidas de la BD
-        String jwt = jwtUtil.create(login.email());
-
-        return jwt;
+        Users user = optionalUser.orElseThrow(LoginFailedException::new);
+        resetBlockedState(user);
+        return createTokens(user);
     }
+
+    // =========================================================
+    // Bloqueo temporal por exceder intentos de Login y Desbloqueo
+    // =========================================================
 
     //Verifica si el usuario está bloqueado temporalmente
     private Boolean isUserCurrentlyLocked(Users user, LocalDateTime now){
@@ -99,6 +113,7 @@ public class LoginService {
     }
 
     //Resetear a 0 los intentos de login fallidos y fecha de expiración de bloqueo a null
+    //Desbloquea al usuario
     private void resetBlockedState(Users user){
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
@@ -117,5 +132,75 @@ public class LoginService {
         }
 
         usersRepository.save(user);
+    }
+
+    // =========================================================
+    // Creación de JWT y RefreshToken
+    // =========================================================
+
+    private AuthResponseDTO createTokens(Users user) {
+        //Creación de JWT
+        Instant now = clock.instant().truncatedTo(ChronoUnit.SECONDS);
+        Instant expiresAt = now.plus(30, ChronoUnit.MINUTES);
+        Instant refreshExpiresAt = now.plus(7, ChronoUnit.DAYS);
+        String jwtId = UUID.randomUUID().toString();
+        String jwt = jwtUtil.create(user.getEmail(), jwtId, expiresAt);
+
+        //Creación de RefreshToken
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        String refreshToken = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+
+        user.setJwtId(jwtId);
+        user.setJwtExpiresAt(expiresAt);
+        user.setRefreshTokenHash(hashRefreshToken(refreshToken));
+        user.setRefreshTokenExpiresAt(refreshExpiresAt);
+
+        usersRepository.save(user);
+
+        //Regresa id
+        return new AuthResponseDTO(jwt, expiresAt, refreshToken, refreshExpiresAt);
+    }
+
+    //Refresca el Refresh Token (Recibe el Refresh Token No hasheado)
+    @Transactional
+    public AuthResponseDTO refresh(String refreshToken) {
+        String refreshTokenHash = hashRefreshToken(refreshToken);
+        Users user = usersRepository.findByRefreshTokenHash(refreshTokenHash)
+                .orElseThrow(InvalidRefreshTokenException::new);
+
+        if (!refreshTokenHash.equals(user.getRefreshTokenHash()) ||
+                !Boolean.TRUE.equals(user.getIsActive()) ||
+                user.getRefreshTokenExpiresAt() == null ||
+                !user.getRefreshTokenExpiresAt().isAfter(clock.instant())) {
+            throw new InvalidRefreshTokenException();
+        }
+        return createTokens(user);
+    }
+
+    //Hashea el Refresh Token
+    private String hashRefreshToken(String token) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 no disponible", ex);
+        }
+    }
+
+    // =========================================================
+    // Verificar si un usuario está AUTENTICADO
+    // =========================================================
+
+    @Transactional(readOnly = true)
+    public AuthenticationStatusDTO getAuthenticationStatus(Long id) {
+        if (id <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El id debe ser mayor que cero");
+        }
+        boolean authenticated = usersRepository.findById(id).map(user ->
+                Boolean.TRUE.equals(user.getIsActive()) && user.getJwtId() != null
+                        && user.getJwtExpiresAt() != null
+                        && user.getJwtExpiresAt().isAfter(clock.instant())).orElse(false);
+        return new AuthenticationStatusDTO(authenticated);
     }
 }

@@ -7,8 +7,8 @@ import java.lang.annotation.*;
 @Constraint(validatedBy = EmailDomainValidator.class)
 @Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ValidEmailDomain {
-    String message() default "El dominio del correo no está permitido";
+public @interface ValidEmail {
+    String message() default "El correo no es válido o el dominio no está permitido";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }

@@ -1,119 +1,56 @@
 package com.ecommerce.userservice.security.config.jwt;
 
-import jakarta.servlet.FilterChain;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import com.ecommerce.userservice.model.Users;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpHeaders;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.mock.web.*;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import jakarta.servlet.FilterChain;
+import java.time.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class JwtFilterTest {
+    @AfterEach void clear() { SecurityContextHolder.clearContext(); }
 
-    private static final String EMAIL = "isaac@example.com";
-
-    private JwtUtil jwtUtil;
-    private UserDetailsService userDetailsService;
-    private JwtFilter jwtFilter;
-    private MockHttpServletRequest request;
-    private MockHttpServletResponse response;
-    private FilterChain filterChain;
-
-    @BeforeEach
-    void preparar() {
-        jwtUtil = mock(JwtUtil.class);
-        userDetailsService = mock(UserDetailsService.class);
-        jwtFilter = new JwtFilter(jwtUtil, userDetailsService);
-        request = new MockHttpServletRequest();
-        response = new MockHttpServletResponse();
-        filterChain = mock(FilterChain.class);
+    @Test void aceptaSoloTokenActualYUsuarioActivo() throws Exception {
+        var util = new JwtUtil("test-secret-at-least-32-bytes-long");
+        var service = mock(UserDetailsService.class);
+        var filter = new JwtFilter(util, service, Clock.systemUTC());
+        var user = new Users();
+        user.setEmail("a@example.com");
+        user.setJwtId("current");
+        user.setJwtExpiresAt(Instant.now().plusSeconds(1800).truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        when(service.loadUserByUsername(user.getEmail())).thenReturn(user);
+        String current = util.create(user.getEmail(), "current", user.getJwtExpiresAt());
+        String old = util.create(user.getEmail(), "old", user.getJwtExpiresAt());
+        for (String token : new String[]{current, old, "invalid"}) {
+            SecurityContextHolder.clearContext();
+            var request = new MockHttpServletRequest();
+            request.addHeader("Authorization", "Bearer " + token);
+            var response = new MockHttpServletResponse();
+            var chain = mock(FilterChain.class);
+            filter.doFilter(request, response, chain);
+            assertEquals(token.equals(current),
+                    SecurityContextHolder.getContext().getAuthentication() != null);
+            verify(chain).doFilter(request, response);
+        }
+        user.setIsActive(false);
         SecurityContextHolder.clearContext();
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer " + current);
+        filter.doFilter(request, new MockHttpServletResponse(), mock(FilterChain.class));
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
-    @AfterEach
-    void limpiar() {
-        SecurityContextHolder.clearContext();
-    }
-
-    @Test
-    void sinHeaderAuthorization_continuaLaCadena() throws Exception {
-        jwtFilter.doFilter(request, response, filterChain);
-
-        verify(filterChain).doFilter(request, response);
-        verifyNoInteractions(jwtUtil, userDetailsService);
-    }
-
-    @Test
-    void conHeaderVacio_continuaLaCadena() throws Exception {
-        request.addHeader(HttpHeaders.AUTHORIZATION, "");
-
-        jwtFilter.doFilter(request, response, filterChain);
-
-        verify(filterChain).doFilter(request, response);
-        verifyNoInteractions(jwtUtil, userDetailsService);
-    }
-
-    @Test
-    void conHeaderQueNoEsBearer_continuaLaCadena() throws Exception {
-        request.addHeader(HttpHeaders.AUTHORIZATION, "Basic credenciales");
-
-        jwtFilter.doFilter(request, response, filterChain);
-
-        verify(filterChain).doFilter(request, response);
-        verifyNoInteractions(jwtUtil, userDetailsService);
-    }
-
-    @Test
-    void conTokenInvalido_continuaLaCadenaSinAutenticar() throws Exception {
-        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer token-invalido");
-        when(jwtUtil.isValid("token-invalido")).thenReturn(false);
-
-        jwtFilter.doFilter(request, response, filterChain);
-
-        verify(filterChain).doFilter(request, response);
-        verify(jwtUtil).isValid("token-invalido");
-        verifyNoInteractions(userDetailsService);
-        assertEquals(null, SecurityContextHolder.getContext().getAuthentication());
-    }
-
-    @Test
-    void conTokenValido_autenticaAlUsuarioEnElContexto() throws Exception {
-        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer token-valido");
-        UserDetails userDetails = mock(UserDetails.class);
-        when(userDetails.getUsername()).thenReturn(EMAIL);
-        when(userDetails.getAuthorities())
-                .thenAnswer(invocacion -> List.of(new SimpleGrantedAuthority("CLIENTE")));
-
-        when(jwtUtil.isValid("token-valido")).thenReturn(true);
-        when(jwtUtil.getUsername("token-valido")).thenReturn(EMAIL);
-        when(userDetailsService.loadUserByUsername(EMAIL)).thenReturn(userDetails);
-
-        jwtFilter.doFilter(request, response, filterChain);
-
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-        assertNotNull(authentication);
-        assertEquals(EMAIL, authentication.getName());
-        assertEquals(
-                "CLIENTE",
-                authentication.getAuthorities().iterator().next().getAuthority()
-        );
-
-        verify(userDetailsService).loadUserByUsername(EMAIL);
-        verify(filterChain).doFilter(request, response);
+    @Test void permiteContinuarSinAuthorization() throws Exception {
+        var filter = new JwtFilter(mock(JwtUtil.class), mock(UserDetailsService.class), Clock.systemUTC());
+        var req = new MockHttpServletRequest();
+        var res = new MockHttpServletResponse();
+        var chain = mock(FilterChain.class);
+        filter.doFilter(req, res, chain);
+        verify(chain).doFilter(req, res);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 }

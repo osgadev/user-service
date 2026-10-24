@@ -140,7 +140,10 @@ public class UsersService implements UserDetailsService {
             if(usersRepository.existsByEmailAndIdNot(userRequest.email(), id)) {
                 throw new EmailAlreadyExistsException("El correo ya se encuentra registrado");
             }
-            user.setEmail(userRequest.email());
+            if (!userRequest.email().equals(user.getEmail())) {
+                user.setEmail(userRequest.email());
+                invalidateTokens(user);
+            }
         }
 
         Users updatedUser = usersRepository.save(user);
@@ -190,6 +193,7 @@ public class UsersService implements UserDetailsService {
                 .orElseThrow(() -> new UsersNotFoundException("Usuario no encontrado"));
 
         user.setIsActive(isActive);
+        if (Boolean.FALSE.equals(isActive)) invalidateTokens(user);
         Users updatedUser = usersRepository.save(user);
 
         UserStatusDTO response = new UserStatusDTO(
@@ -361,7 +365,18 @@ public class UsersService implements UserDetailsService {
         users.setPassword(passwordEncoder.encode(
                 passwordRequestDTO.newPassword()));
 
+        invalidateTokens(users);
         usersRepository.save(users);
     }
 
+    // =========================================================
+    // Invalidar el JWT y refreshToken
+    // =========================================================
+
+    public void invalidateTokens(Users user){
+        user.setJwtId(null);
+        user.setJwtExpiresAt(null);
+        user.setRefreshTokenHash(null);
+        user.setRefreshTokenExpiresAt(null);
+    }
 }

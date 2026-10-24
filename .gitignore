@@ -79,3 +79,8 @@ docker-compose.override.yml
 # DataBase Files
 # =========================
 #V2__insert_users.sql
+
+# =========================
+# Reports
+# =========================
+htmlReport/

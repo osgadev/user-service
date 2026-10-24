@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -57,6 +58,18 @@ public class Users implements UserDetails {
 
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
+
+    @Column(name = "jwt_id", length = 36)
+    private String jwtId;
+
+    @Column(name = "jwt_expires_at")
+    private Instant jwtExpiresAt;
+
+    @Column(name = "refresh_token_hash", length = 64, unique = true)
+    private String refreshTokenHash;
+
+    @Column(name = "refresh_token_expires_at")
+    private Instant refreshTokenExpiresAt;
 
     //constructor para nuevos usuarios
     public Users(String name, String paternalName, String maternalName, String email, String password, Role role, Boolean isActive) {
