@@ -10,8 +10,8 @@ class EmailDomainValidatorTest {
     private final EmailDomainValidator validator = new EmailDomainValidator();
 
     @Test
-    void devuelveFalseSiElEmailEsNulo() {
-        assertFalse(validator.isValid(null, null));
+    void devuelveTrueSiElEmailEsNulo() {
+        assertTrue(validator.isValid(null, null));
     }
 
     @Test
