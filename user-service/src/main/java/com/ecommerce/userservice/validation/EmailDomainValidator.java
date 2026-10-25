@@ -23,8 +23,8 @@ public class EmailDomainValidator
     @Override
     public boolean isValid(String email, ConstraintValidatorContext context) {
 
-        if (email == null || email.isBlank()) {
-            return false;
+        if (email == null) {
+            return true;
         }
 
         if (!email.matches(EMAIL_REGEX)) {
