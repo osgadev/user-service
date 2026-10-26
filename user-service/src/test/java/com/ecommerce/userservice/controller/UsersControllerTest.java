@@ -7,6 +7,7 @@ import com.ecommerce.userservice.dto.UserResponseDTO;
 import com.ecommerce.userservice.dto.UserRoleFilterDTO;
 import com.ecommerce.userservice.dto.UserRoleRequestDTO;
 import com.ecommerce.userservice.dto.UserStatusDTO;
+import com.ecommerce.userservice.exception.UsersNotFoundException;
 import com.ecommerce.userservice.model.Role;
 import com.ecommerce.userservice.service.UsersService;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -177,6 +179,38 @@ class UsersControllerTest {
         assertEquals(HttpStatus.OK, resultado.getStatusCode());
         verify(usersService).updatePassword(any(PasswordRequestDTO.class), any(String.class));
         verify(usersService).updatePassword(request, EMAIL);
+    }
+
+    @Test
+    void updateCurrentUserUsaElEmailDeLaAutenticacion() {
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO(
+                "Carlos", "Garcia", "Sanchez", "nuevo@gmail.com");
+        UserResponseDTO esperado = userResponse();
+        when(authentication.getName()).thenReturn(EMAIL);
+        when(usersService.updateCurrentUser(EMAIL, request)).thenReturn(esperado);
+
+        ResponseEntity<UserResponseDTO> resultado = usersController.updateCurrentUser(authentication, request);
+
+        assertEquals(HttpStatus.OK, resultado.getStatusCode());
+        assertSame(esperado, resultado.getBody());
+        verify(authentication).getName();
+        verify(usersService).updateCurrentUser(EMAIL, request);
+    }
+
+    @Test
+    void updateCurrentUserPropagaLaExcepcionDelServicio() {
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO(
+                "Carlos", null, null, null);
+        when(authentication.getName()).thenReturn(EMAIL);
+        when(usersService.updateCurrentUser(EMAIL, request))
+                .thenThrow(new UsersNotFoundException("Usuario no encontrado"));
+
+        assertThrows(
+                UsersNotFoundException.class,
+                () -> usersController.updateCurrentUser(authentication, request)
+        );
+
+        verify(usersService).updateCurrentUser(EMAIL, request);
     }
 
     private UserResponseDTO userResponse() {

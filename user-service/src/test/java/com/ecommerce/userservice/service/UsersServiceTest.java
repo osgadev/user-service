@@ -22,6 +22,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -555,6 +557,153 @@ class UsersServiceTest {
                 () -> usersService.updatePassword(request, EMAIL)
         );
 
+        verify(usersRepository, never()).save(any(Users.class));
+    }
+
+    @Test
+    void updateCurrentUser_actualizaTodosLosCamposEInvalidaTokens() {
+        usuario.setJwtId("jwt-id");
+        usuario.setJwtExpiresAt(Instant.parse("2026-01-01T13:00:00Z"));
+        usuario.setRefreshTokenHash("refresh-hash");
+        usuario.setRefreshTokenExpiresAt(Instant.parse("2026-01-02T12:00:00Z"));
+
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO(
+                "Carlos",
+                "Garcia",
+                "Sanchez",
+                "nuevo@example.com"
+        );
+
+        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.existsByEmailAndIdNot("nuevo@example.com", 1L)).thenReturn(false);
+        when(usersRepository.save(any(Users.class)))
+                .thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        UserResponseDTO respuesta = usersService.updateCurrentUser(EMAIL, request);
+
+        assertNotNull(respuesta);
+        assertEquals(1L, respuesta.id());
+        assertEquals("CLI-001-C", respuesta.userIdentifier());
+        assertEquals("Carlos Garcia Sanchez", respuesta.fullName());
+        assertEquals("nuevo@example.com", respuesta.email());
+        assertEquals("CLIENTE", respuesta.role());
+        assertEquals(Boolean.TRUE, respuesta.isActive());
+        assertEquals(CREATED_AT, respuesta.createdAt());
+
+        assertEquals("Carlos", usuario.getName());
+        assertEquals("Garcia", usuario.getPaternalName());
+        assertEquals("Sanchez", usuario.getMaternalName());
+        assertEquals("nuevo@example.com", usuario.getEmail());
+        assertNull(usuario.getJwtId());
+        assertNull(usuario.getJwtExpiresAt());
+        assertNull(usuario.getRefreshTokenHash());
+        assertNull(usuario.getRefreshTokenExpiresAt());
+
+        verify(usersRepository).findByEmail(EMAIL);
+        verify(usersRepository).existsByEmailAndIdNot("nuevo@example.com", 1L);
+        verify(usersRepository).save(usuario);
+    }
+
+    @Test
+    void updateCurrentUser_mantieneLosCamposNulosOVacios() {
+        usuario.setJwtId("jwt-id");
+        usuario.setRefreshTokenHash("refresh-hash");
+
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO(null, "", null, "");
+
+        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.save(any(Users.class)))
+                .thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        UserResponseDTO respuesta = usersService.updateCurrentUser(EMAIL, request);
+
+        assertEquals("Isaac Lopez Perez", respuesta.fullName());
+        assertEquals(EMAIL, respuesta.email());
+        assertEquals("Isaac", usuario.getName());
+        assertEquals("Lopez", usuario.getPaternalName());
+        assertEquals("Perez", usuario.getMaternalName());
+        assertEquals(EMAIL, usuario.getEmail());
+        assertEquals("jwt-id", usuario.getJwtId());
+        assertEquals("refresh-hash", usuario.getRefreshTokenHash());
+
+        verify(usersRepository).findByEmail(EMAIL);
+        verify(usersRepository, never()).existsByEmailAndIdNot(anyString(), anyLong());
+        verify(usersRepository).save(usuario);
+    }
+
+    @Test
+    void updateCurrentUser_noInvalidaTokensSiElEmailNoCambia() {
+        usuario.setJwtId("jwt-id");
+        usuario.setJwtExpiresAt(Instant.parse("2026-01-01T13:00:00Z"));
+        usuario.setRefreshTokenHash("refresh-hash");
+        usuario.setRefreshTokenExpiresAt(Instant.parse("2026-01-02T12:00:00Z"));
+
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO(
+                "Carlos",
+                null,
+                null,
+                EMAIL
+        );
+
+        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.existsByEmailAndIdNot(EMAIL, 1L)).thenReturn(false);
+        when(usersRepository.save(any(Users.class)))
+                .thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        UserResponseDTO respuesta = usersService.updateCurrentUser(EMAIL, request);
+
+        assertEquals("Carlos Lopez Perez", respuesta.fullName());
+        assertEquals(EMAIL, respuesta.email());
+        assertEquals("Carlos", usuario.getName());
+        assertEquals(EMAIL, usuario.getEmail());
+        assertEquals("jwt-id", usuario.getJwtId());
+        assertEquals("refresh-hash", usuario.getRefreshTokenHash());
+
+        verify(usersRepository).existsByEmailAndIdNot(EMAIL, 1L);
+        verify(usersRepository).save(usuario);
+    }
+
+    @Test
+    void updateCurrentUser_lanzaExcepcionSiElEmailPerteneceAOtroUsuario() {
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO(
+                null,
+                null,
+                null,
+                "nuevo@example.com"
+        );
+
+        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.existsByEmailAndIdNot("nuevo@example.com", 1L)).thenReturn(true);
+
+        assertThrows(
+                EmailAlreadyExistsException.class,
+                () -> usersService.updateCurrentUser(EMAIL, request)
+        );
+
+        assertEquals(EMAIL, usuario.getEmail());
+        verify(usersRepository).findByEmail(EMAIL);
+        verify(usersRepository).existsByEmailAndIdNot("nuevo@example.com", 1L);
+        verify(usersRepository, never()).save(any(Users.class));
+    }
+
+    @Test
+    void updateCurrentUser_lanzaExcepcionSiNoExiste() {
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO(
+                "Carlos",
+                "Garcia",
+                "Sanchez",
+                "nuevo@example.com"
+        );
+
+        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+
+        assertThrows(
+                UsersNotFoundException.class,
+                () -> usersService.updateCurrentUser(EMAIL, request)
+        );
+
+        verify(usersRepository).findByEmail(EMAIL);
+        verify(usersRepository, never()).existsByEmailAndIdNot(anyString(), anyLong());
         verify(usersRepository, never()).save(any(Users.class));
     }
 }
