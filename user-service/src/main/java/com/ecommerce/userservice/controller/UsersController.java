@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -24,7 +25,7 @@ public class UsersController {
     // Operaciones CRUD
     // =========================================================
 
-//    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR', 'CLIENTE', 'USUARIO', 'VENDEDOR', 'REPARTIDOR')")
+    //    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR', 'CLIENTE', 'USUARIO', 'VENDEDOR', 'REPARTIDOR')")
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id) {
 
@@ -84,7 +85,7 @@ public class UsersController {
 
     @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     @GetMapping("/{id}/isActive")
-    public ResponseEntity<UserStatusDTO> getUserIsActive(@PathVariable Long id){
+    public ResponseEntity<UserStatusDTO> getUserIsActive(@PathVariable Long id) {
 
         UserStatusDTO userResponse = usersService.findUserStatusById(id);
 
@@ -117,7 +118,7 @@ public class UsersController {
 
     @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     @PatchMapping("/{id}/role")
-    public ResponseEntity<UserResponseDTO> updateUserRole(@PathVariable Long id, @Valid @RequestBody UserRoleRequestDTO request){
+    public ResponseEntity<UserResponseDTO> updateUserRole(@PathVariable Long id, @Valid @RequestBody UserRoleRequestDTO request) {
         UserResponseDTO response = usersService.updateUserRole(id, request.role());
         return ResponseEntity.ok(response);
     }
@@ -132,10 +133,26 @@ public class UsersController {
                                                //Contiene la información del usuario que hizo la petición
                                                //Se general al validarse que el JWT es valido
                                                //En el Controller se inyectan los valores en automatico si se define así
-                                               Authentication authentication){
+                                               Authentication authentication) {
 
         usersService.updatePassword(passwordRequestDTO, authentication.getName());
 
         return ResponseEntity.ok().build();
+    }
+
+    // =========================================================
+    // Actualizr la informacion del usuario de la sesion actual
+    // =========================================================
+
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/me")
+    public ResponseEntity<UserResponseDTO> updateCurrentUser(
+            Authentication authentication,
+            @Valid @RequestBody UpdateUserRequestDTO userRequest
+    ) {
+
+        UserResponseDTO usuarioActualizado = usersService.updateCurrentUser(authentication.getName(), userRequest);
+
+        return ResponseEntity.ok(usuarioActualizado);
     }
 }

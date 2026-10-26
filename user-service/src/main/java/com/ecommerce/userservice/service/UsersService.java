@@ -8,6 +8,7 @@ import com.ecommerce.userservice.exception.PasswordException;
 import com.ecommerce.userservice.model.Role;
 import com.ecommerce.userservice.model.Users;
 import com.ecommerce.userservice.repository.UsersRepository;
+import jakarta.validation.Valid;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -121,6 +122,7 @@ public class UsersService implements UserDetailsService {
     }
 
     //Actualización de datos de usuario
+    @Transactional
     public UserResponseDTO updateUser(Long id, UpdateUserRequestDTO userRequest){
         Users user = usersRepository.findById(id)
                 .orElseThrow(() -> new UsersNotFoundException(
@@ -378,5 +380,45 @@ public class UsersService implements UserDetailsService {
         user.setJwtExpiresAt(null);
         user.setRefreshTokenHash(null);
         user.setRefreshTokenExpiresAt(null);
+    }
+
+    @Transactional
+    public UserResponseDTO updateCurrentUser(String username,UpdateUserRequestDTO userRequest) {
+        Users user = usersRepository.findByEmail(username)
+                .orElseThrow(() -> new UsersNotFoundException(
+                        "Usuario no encontrado"
+                ));
+
+        if(userRequest.name() != null && !userRequest.name().isEmpty()) {
+            user.setName(userRequest.name());
+        }
+        if(userRequest.paternalName() != null && !userRequest.paternalName().isEmpty()) {
+            user.setPaternalName(userRequest.paternalName());
+        }
+        if(userRequest.maternalName() != null && !userRequest.maternalName().isEmpty()) {
+            user.setMaternalName(userRequest.maternalName());
+        }
+        if(userRequest.email() != null && !userRequest.email().isEmpty()) {
+            if(usersRepository.existsByEmailAndIdNot(userRequest.email(), user.getId())) {
+                throw new EmailAlreadyExistsException("El correo ya se encuentra registrado");
+            }
+            if (!userRequest.email().equals(user.getEmail())) {
+                user.setEmail(userRequest.email());
+                invalidateTokens(user);
+            }
+        }
+
+        Users updatedUser = usersRepository.save(user);
+        UserResponseDTO response = new UserResponseDTO(
+                updatedUser.getId(),
+                updatedUser.getUserIdentifier(),
+                updatedUser.getName() + " " + updatedUser.getPaternalName() + " " + updatedUser.getMaternalName(),
+                updatedUser.getEmail(),
+                updatedUser.getRole().name(),
+                updatedUser.getIsActive(),
+                updatedUser.getCreatedAt()
+        );
+
+        return response;
     }
 }
