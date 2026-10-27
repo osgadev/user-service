@@ -18,13 +18,17 @@ public class EmailDomainValidator
     );
 
     private static final String EMAIL_REGEX =
-            "^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z]{2,})+$";
+            "^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z]{2,})++$";
 
     @Override
     public boolean isValid(String email, ConstraintValidatorContext context) {
 
         if (email == null) {
             return true;
+        }
+
+        if (email.length() > 150) {
+            return false;
         }
 
         if (!email.matches(EMAIL_REGEX)) {

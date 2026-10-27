@@ -8,7 +8,7 @@ import java.lang.annotation.*;
 
 @Constraint(validatedBy = {})
 @ReportAsSingleViolation
-@Pattern(regexp = "[\\p{L}]+(?:[ ]+[\\p{L}]+)*")
+@Pattern(regexp = "[\\p{L}]+(?:[ ]+[\\p{L}]+)*+")
 @Target({ElementType.FIELD, ElementType.RECORD_COMPONENT})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidName {
