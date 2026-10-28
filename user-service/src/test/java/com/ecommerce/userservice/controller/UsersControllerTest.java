@@ -213,6 +213,34 @@ class UsersControllerTest {
         verify(usersService).updateCurrentUser(EMAIL, request);
     }
 
+    @Test
+    void getMyProfileUsaElEmailDeLaAutenticacion() {
+        UserResponseDTO esperado = userResponse();
+        when(authentication.getName()).thenReturn(EMAIL);
+        when(usersService.findByEmail(EMAIL)).thenReturn(esperado);
+
+        ResponseEntity<UserResponseDTO> resultado = usersController.getMyProfile(authentication);
+
+        assertEquals(HttpStatus.OK, resultado.getStatusCode());
+        assertSame(esperado, resultado.getBody());
+        verify(authentication).getName();
+        verify(usersService).findByEmail(EMAIL);
+    }
+
+    @Test
+    void getMyProfilePropagaLaExcepcionDelServicio() {
+        when(authentication.getName()).thenReturn(EMAIL);
+        when(usersService.findByEmail(EMAIL))
+                .thenThrow(new UsersNotFoundException("Usuario no encontrado"));
+
+        assertThrows(
+                UsersNotFoundException.class,
+                () -> usersController.getMyProfile(authentication)
+        );
+
+        verify(usersService).findByEmail(EMAIL);
+    }
+
     private UserResponseDTO userResponse() {
         return new UserResponseDTO(
                 1L, "CLI-001-C", "Isaac Lopez Perez", EMAIL, "CLIENTE", true,
