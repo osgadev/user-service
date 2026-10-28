@@ -141,7 +141,7 @@ public class UsersController {
     }
 
     // =========================================================
-    // Actualizr la informacion del usuario de la sesion actual
+    // Actualizar la informacion del usuario de la sesion actual
     // =========================================================
 
     @PreAuthorize("isAuthenticated()")
@@ -154,5 +154,15 @@ public class UsersController {
         UserResponseDTO usuarioActualizado = usersService.updateCurrentUser(authentication.getName(), userRequest);
 
         return ResponseEntity.ok(usuarioActualizado);
+    }
+    // =========================================================
+    // Consultar Perfil del Usuario Autenticado (/api/users/me)
+    // =========================================================
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponseDTO> getMyProfile(Authentication authentication) {
+        String email = authentication.getName();
+        UserResponseDTO response = usersService.findByEmail(email);
+        return ResponseEntity.ok(response);
     }
 }

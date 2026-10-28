@@ -12,11 +12,16 @@ import com.ecommerce.userservice.exception.UsersNotFoundException;
 import com.ecommerce.userservice.model.Role;
 import com.ecommerce.userservice.model.Users;
 import com.ecommerce.userservice.repository.UsersRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -37,26 +42,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class UsersServiceTest {
 
     private static final String EMAIL = "isaac@example.com";
     private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, 1, 1, 12, 0);
 
+    @Mock
     private UsersRepository usersRepository;
+
+    @InjectMocks
     private UsersService usersService;
+
     private PasswordEncoder passwordEncoder;
     private Users usuario;
 
     @BeforeEach
     void preparar() {
-        usersRepository = mock(UsersRepository.class);
-        usersService = new UsersService(usersRepository);
         passwordEncoder = new BCryptPasswordEncoder();
 
         usuario = new Users();
