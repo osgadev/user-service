@@ -75,6 +75,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/auth/users/*/authenticated").permitAll()
                         //Cualquiera puede crear un nuevo usuario (Crear una cuenta)
                     .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+                        //Cualquiera puede acceder a la documentacion de los endpoints
+                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
 
                         //El resto de Endpoints sí requieren Autenticación
                     .anyRequest()
