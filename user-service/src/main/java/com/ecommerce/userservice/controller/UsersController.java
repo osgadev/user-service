@@ -25,7 +25,7 @@ public class UsersController {
     // Operaciones CRUD
     // =========================================================
 
-    //    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR', 'CLIENTE', 'USUARIO', 'VENDEDOR', 'REPARTIDOR')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id) {
 
@@ -50,7 +50,7 @@ public class UsersController {
                 .body(usuarioGuardado);
     }
 
-    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR', 'CLIENTE', 'USUARIO', 'VENDEDOR', 'REPARTIDOR')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseDTO> updateUser(
             @PathVariable Long id,
@@ -127,7 +127,7 @@ public class UsersController {
     // Cambiar Contraseña
     // =========================================================
 
-    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR', 'CLIENTE', 'USUARIO', 'VENDEDOR', 'REPARTIDOR')")
+    @PreAuthorize("isAuthenticated()")
     @PatchMapping("/password")
     public ResponseEntity<Void> updatePassword(@Valid @RequestBody PasswordRequestDTO passwordRequestDTO,
                                                //Contiene la información del usuario que hizo la petición
@@ -159,6 +159,7 @@ public class UsersController {
     // Consultar Perfil del Usuario Autenticado (/api/users/me)
     // =========================================================
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getMyProfile(Authentication authentication) {
         String email = authentication.getName();
