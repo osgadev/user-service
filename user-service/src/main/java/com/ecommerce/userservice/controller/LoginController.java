@@ -23,7 +23,8 @@ public class LoginController {
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponseDTO> refresh(@Valid @RequestBody RefreshRequestDTO request) {
-        return tokenResponse(loginService.refresh(request.refreshToken()));
+        AuthResponseDTO response = loginService.refresh(request.refreshToken());
+        return tokenResponse(response); // Cambiado de ResponseEntity.ok(response) a tokenResponse(response)
     }
 
     @GetMapping("/users/{id}/authenticated")
