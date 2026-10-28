@@ -17,11 +17,13 @@ public class JwtUtil {
         this.algorithm = Algorithm.HMAC256(secret);
     }
 
-    public String create(String email, String jwtId, Instant expiresAt) {
+    public String create(String email, Long userId, String role, String jwtId, Instant expiresAt) {
         return JWT.create()
                 .withSubject(email)
                 .withIssuer("Users-MS")
                 .withJWTId(jwtId)
+                .withClaim("userId", userId)
+                .withClaim("role", role)
                 .withIssuedAt(new Date())
                 .withExpiresAt(Date.from(expiresAt))
                 .sign(algorithm);

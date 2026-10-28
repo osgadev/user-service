@@ -19,12 +19,13 @@ class JwtFilterTest {
         var service = mock(UserDetailsService.class);
         var filter = new JwtFilter(util, service, Clock.systemUTC());
         var user = new Users();
+        user.setId(1L);
         user.setEmail("a@example.com");
         user.setJwtId("current");
         user.setJwtExpiresAt(Instant.now().plusSeconds(1800).truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         when(service.loadUserByUsername(user.getEmail())).thenReturn(user);
-        String current = util.create(user.getEmail(), "current", user.getJwtExpiresAt());
-        String old = util.create(user.getEmail(), "old", user.getJwtExpiresAt());
+        String current = util.create(user.getEmail(), user.getId(), user.getRole().name(), "current", user.getJwtExpiresAt());
+        String old = util.create(user.getEmail(), user.getId(), user.getRole().name(), "old", user.getJwtExpiresAt());
         for (String token : new String[]{current, old, "invalid"}) {
             SecurityContextHolder.clearContext();
             var request = new MockHttpServletRequest();
