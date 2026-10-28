@@ -89,7 +89,7 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException ex) {
 
         Map<String, String> error = Map.of(
-                "error", "Bad Request",
+                "code", "Bad Request",
                 "message", "El rol enviado no es válido."
         );
 

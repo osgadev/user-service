@@ -50,7 +50,7 @@ public class SecurityConfig {
                                 res.setContentType("application/json;charset=UTF-8");
                                 res.getWriter().write(
                                         "{\"status\":401," +
-                                                "\"error\":\"Unauthorized\"," +
+                                                "\"code\":\"Unauthorized\"," +
                                                 "\"message\":\"Token ausente o inválido\"}");
                                 }
                         )
@@ -60,7 +60,7 @@ public class SecurityConfig {
                                 res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                                 res.setContentType("application/json;charset=UTF-8");
                                 res.getWriter().write(
-                                        "{\"status\":403,\"error\":\"Forbidden\"" +
+                                        "{\"status\":403,\"code\":\"Forbidden\"" +
                                                 ",\"message\":\"No tienes permisos para acceder a este recurso\"}");
                         })
                 )
