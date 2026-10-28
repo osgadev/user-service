@@ -47,7 +47,7 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.CONFLICT, respuesta.getStatusCode());
         assertNotNull(respuesta.getBody());
         assertEquals(409, respuesta.getBody().status());
-        assertEquals("Conflict", respuesta.getBody().error());
+        assertEquals("Conflict", respuesta.getBody().code());
         assertEquals("El correo ya se encuentra registrado", respuesta.getBody().message());
         assertEquals("/api/users/1", respuesta.getBody().path());
     }
@@ -91,7 +91,7 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
         assertNotNull(respuesta.getBody());
-        assertEquals("Bad Request", respuesta.getBody().get("error"));
+        assertEquals("Bad Request", respuesta.getBody().get("code"));
         assertEquals("El rol enviado no es válido.", respuesta.getBody().get("message"));
     }
 
@@ -158,7 +158,7 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.UNAUTHORIZED, respuesta.getStatusCode());
         assertNotNull(respuesta.getBody());
         assertEquals(401, respuesta.getBody().status());
-        assertEquals("Unauthorized", respuesta.getBody().error());
+        assertEquals("Unauthorized", respuesta.getBody().code());
         assertEquals("Credenciales inválidas", respuesta.getBody().message());
     }
 
@@ -172,7 +172,7 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
         assertNotNull(respuesta.getBody());
         assertEquals(400, respuesta.getBody().status());
-        assertEquals("Bad Request", respuesta.getBody().error());
+        assertEquals("Bad Request", respuesta.getBody().code());
         assertEquals("size fuera de rango", respuesta.getBody().message());
     }
 
@@ -244,7 +244,7 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.FORBIDDEN, respuesta.getStatusCode());
         assertNotNull(respuesta.getBody());
         assertEquals(403, respuesta.getBody().status());
-        assertEquals("Forbidden", respuesta.getBody().error());
+        assertEquals("Forbidden", respuesta.getBody().code());
         assertEquals(
                 "No tienes permisos para acceder a este recurso",
                 respuesta.getBody().message()
