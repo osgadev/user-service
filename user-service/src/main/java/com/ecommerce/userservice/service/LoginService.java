@@ -144,7 +144,8 @@ public class LoginService {
         Instant expiresAt = now.plus(30, ChronoUnit.MINUTES);
         Instant refreshExpiresAt = now.plus(7, ChronoUnit.DAYS);
         String jwtId = UUID.randomUUID().toString();
-        String jwt = jwtUtil.create(user.getEmail(), jwtId, expiresAt);
+        String role = user.getRole().name();
+        String jwt = jwtUtil.create(user.getEmail(), user.getId(), role, jwtId, expiresAt);
 
         //Creación de RefreshToken
         byte[] bytes = new byte[32];

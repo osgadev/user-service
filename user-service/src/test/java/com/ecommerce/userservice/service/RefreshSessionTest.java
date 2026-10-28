@@ -40,6 +40,8 @@ class RefreshSessionTest {
         assertEquals(64, user.getRefreshTokenHash().length());
         assertEquals(43, first.refreshToken().length());
         assertEquals(now.plusSeconds(1800), first.jwtExpiresAt());
+        assertEquals(user.getId(), jwt.verify(first.jwt()).getClaim("userId").asLong());
+        assertEquals(user.getRole().name(), jwt.verify(first.jwt()).getClaim("role").asString());
         assertTrue(service.getAuthenticationStatus(1L).authenticated());
 
         // Vencer el acceso no impide usar la credencial de renovación.
@@ -50,6 +52,8 @@ class RefreshSessionTest {
         assertNotEquals(first.jwt(), second.jwt());
         assertNotEquals(first.refreshToken(), second.refreshToken());
         assertEquals(user.getJwtId(), jwt.verify(second.jwt()).getId());
+        assertEquals(user.getId(), jwt.verify(second.jwt()).getClaim("userId").asLong());
+        assertEquals(user.getRole().name(), jwt.verify(second.jwt()).getClaim("role").asString());
         assertThrows(InvalidRefreshTokenException.class, () -> service.refresh(first.refreshToken()));
 
         var third = service.login(new LoginRequestDTO(user.getEmail(), "password"));

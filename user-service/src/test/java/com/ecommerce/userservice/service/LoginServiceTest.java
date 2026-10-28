@@ -2,6 +2,7 @@ package com.ecommerce.userservice.service;
 
 import com.ecommerce.userservice.dto.LoginRequestDTO;
 import com.ecommerce.userservice.exception.LoginFailedException;
+import com.ecommerce.userservice.model.Role;
 import com.ecommerce.userservice.model.Users;
 import com.ecommerce.userservice.repository.UsersRepository;
 import com.ecommerce.userservice.security.config.jwt.JwtUtil;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -63,6 +65,7 @@ class LoginServiceTest {
         usuario.setId(1L);
         usuario.setEmail(EMAIL);
         usuario.setPassword("password-codificada");
+        usuario.setRole(Role.CLIENTE);
         usuario.setFailedLoginAttempts(0);
         usuario.setLockedUntil(null);
 
@@ -73,7 +76,7 @@ class LoginServiceTest {
     void login_exitoso_usuarioExistente() {
         when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
-        when(jwtUtil.create(org.mockito.ArgumentMatchers.eq(EMAIL), any(String.class), any(Instant.class))).thenReturn(TOKEN);
+        when(jwtUtil.create(eq(EMAIL), eq(1L), eq("CLIENTE"), any(String.class), any(Instant.class))).thenReturn(TOKEN);
 
         var resultado = loginService.login(request);
 
@@ -89,7 +92,7 @@ class LoginServiceTest {
         assertEquals(PASSWORD, enviado.getCredentials());
 
         verify(usersRepository).save(usuario);
-        verify(jwtUtil).create(org.mockito.ArgumentMatchers.eq(EMAIL), any(String.class), any(Instant.class));
+        verify(jwtUtil).create(eq(EMAIL), eq(1L), eq("CLIENTE"), any(String.class), eq(INSTANTE_ACTUAL.plusSeconds(1800)));
     }
 
     @Test
@@ -105,7 +108,7 @@ class LoginServiceTest {
         usuario.setFailedLoginAttempts(2);
         when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
-        when(jwtUtil.create(org.mockito.ArgumentMatchers.eq(EMAIL), any(String.class), any(Instant.class))).thenReturn(TOKEN);
+        when(jwtUtil.create(eq(EMAIL), eq(1L), eq("CLIENTE"), any(String.class), any(Instant.class))).thenReturn(TOKEN);
 
         var resultado = loginService.login(request);
 
@@ -136,7 +139,7 @@ class LoginServiceTest {
         usuario.setLockedUntil(AHORA.minusMinutes(1));
         when(usersRepository.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(usuario));
         when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
-        when(jwtUtil.create(org.mockito.ArgumentMatchers.eq(EMAIL), any(String.class), any(Instant.class))).thenReturn(TOKEN);
+        when(jwtUtil.create(eq(EMAIL), eq(1L), eq("CLIENTE"), any(String.class), any(Instant.class))).thenReturn(TOKEN);
 
         var resultado = loginService.login(request);
 
