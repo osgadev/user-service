@@ -38,4 +38,9 @@ class EmailDomainValidatorTest {
     void rechazaDominiosNoPermitidos() {
         assertFalse(validator.isValid("isaac@dominio-invalido.com", null));
     }
+
+    @Test
+    void rechazaEmailDeMasDe150Caracteres() {
+        assertFalse(validator.isValid("a".repeat(141) + "@gmail.com", null));
+    }
 }

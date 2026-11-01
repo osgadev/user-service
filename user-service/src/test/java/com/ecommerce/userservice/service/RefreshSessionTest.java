@@ -73,6 +73,14 @@ class RefreshSessionTest {
         assertThrows(InvalidRefreshTokenException.class, () -> service.refresh(tokens.refreshToken()));
     }
 
+    @Test void rechazaUsuarioDevueltoConHashDistinto() {
+        var tokens = service.login(new LoginRequestDTO(user.getEmail(), "password"));
+        user.setRefreshTokenHash("hash-de-otra-sesion");
+        when(repository.findByRefreshTokenHash(anyString())).thenReturn(Optional.of(user));
+
+        assertThrows(InvalidRefreshTokenException.class, () -> service.refresh(tokens.refreshToken()));
+    }
+
     @Test void estadoContemplaUsuariosSinSesionInactivosYNoExistentes() {
         assertFalse(service.getAuthenticationStatus(1L).authenticated());
         assertFalse(service.getAuthenticationStatus(2L).authenticated());
