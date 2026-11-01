@@ -713,4 +713,55 @@ class UsersServiceTest {
         verify(usersRepository, never()).existsByEmailAndIdNot(anyString(), anyLong());
         verify(usersRepository, never()).save(any(Users.class));
     }
+    @Test
+    void updateUser_conservaCamposVaciosONulosYNoInvalidaSiElCorreoEsIgual() {
+        usuario.setJwtId("sesion-actual");
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO("", null, "", EMAIL);
+        when(usersRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usersRepository.save(any(Users.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        UserResponseDTO respuesta = usersService.updateUser(1L, request);
+
+        assertEquals("Isaac Lopez Perez", respuesta.fullName());
+        assertEquals(EMAIL, respuesta.email());
+        assertEquals("sesion-actual", usuario.getJwtId());
+        verify(usersRepository).existsByEmailAndIdNot(EMAIL, 1L);
+    }
+
+    @Test
+    void updateCurrentUser_conservaCamposVaciosONulos() {
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO("", null, "", "");
+        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.save(any(Users.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        UserResponseDTO respuesta = usersService.updateCurrentUser(EMAIL, request);
+
+        assertEquals("Isaac Lopez Perez", respuesta.fullName());
+        assertEquals(EMAIL, respuesta.email());
+        verify(usersRepository, never()).existsByEmailAndIdNot(anyString(), anyLong());
+    }
+
+    @Test
+    void activateAndDeactivateUser_noInvalidaAlActivar() {
+        usuario.setJwtId("sesion-actual");
+        when(usersRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usersRepository.save(any(Users.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        UserStatusDTO respuesta = usersService.activateAndDeactivateUser(1L, true);
+
+        assertTrue(respuesta.isActive());
+        assertEquals("sesion-actual", usuario.getJwtId());
+    }
+
+    @Test
+    void ambasActualizacionesConservanElEmailCuandoEsNulo() {
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO(null, null, null, null);
+        when(usersRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usersRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+        when(usersRepository.save(any(Users.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        assertEquals(EMAIL, usersService.updateUser(1L, request).email());
+        assertEquals(EMAIL, usersService.updateCurrentUser(EMAIL, request).email());
+        verify(usersRepository, never()).existsByEmailAndIdNot(anyString(), anyLong());
+    }
 }

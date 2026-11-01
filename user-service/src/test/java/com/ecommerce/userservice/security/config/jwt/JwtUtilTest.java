@@ -30,4 +30,13 @@ class JwtUtilTest {
         String wrongIssuer = JWT.create().withIssuer("otro").sign(Algorithm.HMAC256(secret));
         assertThrows(JWTVerificationException.class, () -> util.verify(wrongIssuer));
     }
+    @Test void rechazaPorSeparadoTokensSinIdOSinExpiracion() {
+        Instant exp = Instant.now().plusSeconds(1800);
+        String sinId = JWT.create().withIssuer("Users-MS").withSubject("a@example.com")
+                .withExpiresAt(exp).sign(Algorithm.HMAC256(secret));
+        String sinExpiracion = JWT.create().withIssuer("Users-MS").withSubject("a@example.com")
+                .withJWTId("id").sign(Algorithm.HMAC256(secret));
+        assertThrows(JWTVerificationException.class, () -> util.verify(sinId));
+        assertThrows(JWTVerificationException.class, () -> util.verify(sinExpiracion));
+    }
 }
